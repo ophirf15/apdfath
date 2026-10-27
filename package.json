@@ -4,9 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "dev": "node ./node_modules/vite/bin/vite.js",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
+    "build": "npm run typecheck && node ./node_modules/vite/bin/vite.js build",
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "smoke": "node ./scripts/smoke-export.mjs"
   },
   "peerDependencies": {
     "react": ">=18",

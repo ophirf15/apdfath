@@ -52,7 +52,7 @@ export function Toolbar({ fileLabel, tool, zoom, onTool, onZoom, onOpen, onDownl
     <div className="pte-toolbar" role="toolbar" aria-label="PDF text editing">
       <div className="pte-toolbar-group">
         <button type="button" className="pte-text-button" onClick={onOpen}>
-          Open
+          Open PDF / DOCX
         </button>
         <button type="button" className="pte-text-button pte-primary" onClick={onDownload}>
           Download PDF

@@ -3,6 +3,7 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { exportPdf } from './exportPdf'
 import { clamp } from './geometry'
 import { isDirty, maxZ, patchBlock, reorder } from './model'
+import { openDocumentFile } from './openDocument'
 import { openPdf, pdfErrorMessage, readPdfInput } from './openPdf'
 import { PdfPage } from './PdfPage'
 import { createSamplePdf } from './samplePdf'
@@ -17,10 +18,16 @@ export type PdfSource = File | Blob | ArrayBuffer | Uint8Array | string | null
 export type PdfTextEditorProps = {
   file?: PdfSource
   className?: string
+  /** Fired after a successful export so a host can persist bytes (Leasegen / Apryse save loop). */
+  onExported?: (bytes: Uint8Array, fileName: string) => void
+  /** Fired whenever the dirty state changes. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 export type PdfTextEditorHandle = {
   exportPdf: () => Promise<Uint8Array>
+  getFileLabel: () => string
+  isDirty: () => boolean
 }
 
 function imageSize(dataUrl: string): Promise<{ width: number; height: number }> {
@@ -53,7 +60,7 @@ function savePdf(bytes: Uint8Array, fileName: string) {
 }
 
 export const PdfTextEditor = forwardRef<PdfTextEditorHandle, PdfTextEditorProps>(function PdfTextEditor(
-  { file = null, className },
+  { file = null, className, onExported, onDirtyChange },
   ref,
 ) {
   const history = useHistory()
@@ -106,6 +113,14 @@ export const PdfTextEditor = forwardRef<PdfTextEditorHandle, PdfTextEditorProps>
         setEditingId(null)
         setCurrentPage(0)
         setTool('edit-text')
+        // Fit first page to the stage width (Apryse-style open).
+        const stage = stageRef.current
+        const first = pageList[0]
+        if (stage && first) {
+          const base = first.getViewport({ scale: 1 })
+          const available = Math.max(240, stage.clientWidth - 48)
+          setZoom(clamp(available / base.width, 0.4, 2))
+        }
       } catch (loadError) {
         if (id === loadId.current) setError(pdfErrorMessage(loadError))
       } finally {
@@ -201,11 +216,17 @@ export const PdfTextEditor = forwardRef<PdfTextEditorHandle, PdfTextEditorProps>
       if (!originalRef.current) throw new Error('No PDF is open.')
       return exportPdf(originalRef.current, modelRef.current)
     },
+    getFileLabel: () => fileLabel,
+    isDirty: () => modelRef.current.blocks.some(isDirty) || modelRef.current.images.length > 0,
   }))
 
   const selected = history.present.blocks.find((block) => block.id === selectedId && !block.removed) ?? null
   const imageSelected = history.present.images.some((image) => image.id === selectedId)
   const edited = history.present.blocks.some(isDirty) || history.present.images.length > 0
+
+  useEffect(() => {
+    onDirtyChange?.(edited)
+  }, [edited, onDirtyChange])
 
   const commitText = (id: string, text: string) => {
     setEditingId(null)
@@ -301,10 +322,24 @@ export const PdfTextEditor = forwardRef<PdfTextEditorHandle, PdfTextEditorProps>
     try {
       const bytes = await exportPdf(originalRef.current, history.present)
       const base = fileLabel.replace(/\.pdf$/i, '')
-      savePdf(bytes, `${base}-edited.pdf`)
+      const outName = `${base}-edited.pdf`
+      savePdf(bytes, outName)
+      onExported?.(bytes, outName)
       setError(null)
     } catch (exportError) {
       setError(pdfErrorMessage(exportError))
+    }
+  }
+
+  const openChosen = async (chosen: File) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const opened = await openDocumentFile(chosen)
+      await loadBytes(opened.bytes, opened.label)
+    } catch (loadError) {
+      setLoading(false)
+      setError(pdfErrorMessage(loadError))
     }
   }
 
@@ -429,19 +464,24 @@ export const PdfTextEditor = forwardRef<PdfTextEditorHandle, PdfTextEditorProps>
         <button type="button" aria-label="Next page" disabled={currentPage >= pages.length - 1} onClick={() => goToPage(currentPage + 1)}>
           Next
         </button>
-        <span className="pte-status">{error ?? (edited ? 'Edits stay in the boxes until you download.' : 'Click a dashed box, then double-click to edit the text.')}</span>
+        <span className="pte-status">
+          {error ??
+            (edited
+              ? 'Edits stay in the boxes until you download or Save PDF.'
+              : 'Open a PDF/DOCX. Click a dashed box, then double-click to edit.')}
+        </span>
       </footer>
       <input
         ref={fileInputRef}
         className="pte-sr"
         type="file"
-        accept="application/pdf"
-        aria-label="Open a PDF"
+        accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
+        aria-label="Open a PDF or DOCX"
         onChange={(event) => {
           const chosen = event.target.files?.[0]
           event.target.value = ''
           if (!chosen) return
-          void readPdfInput(chosen).then((bytes) => loadBytes(bytes, chosen.name)).catch((loadError) => setError(pdfErrorMessage(loadError)))
+          void openChosen(chosen)
         }}
       />
       <input

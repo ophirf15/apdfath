@@ -3,7 +3,85 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDF Text Editor</title>
+    <title>apdfath · PDF text editor</title>
+    <style>
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: #e8edf3;
+        color: #1c2430;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+      }
+      .lab-shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+      .lab-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 16px;
+        background: #0f1720;
+        color: #f4f7fb;
+      }
+      .lab-brand {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .lab-sub {
+        margin: 2px 0 0;
+        font-size: 0.8rem;
+        opacity: 0.72;
+      }
+      .lab-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .lab-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #243041;
+        font-size: 0.75rem;
+      }
+      .lab-pill.is-dirty {
+        background: #8a5a12;
+      }
+      .lab-note {
+        margin: 0;
+        padding: 6px 16px;
+        background: #dce7f4;
+        font-size: 0.8rem;
+      }
+      .lab-shell .pte {
+        flex: 1;
+        min-height: 0;
+      }
+      .lab-actions .pte-text-button {
+        border: 1px solid #4b5a70;
+        background: #1c2838;
+        color: #f4f7fb;
+        border-radius: 6px;
+        padding: 7px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .lab-actions .pte-primary {
+        background: #2f6fed;
+        border-color: #2f6fed;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
